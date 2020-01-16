@@ -68,8 +68,6 @@ implements Handler.Callback,
 	private native void NativeAccelerometer(float ax, float ay,
 	                                        float az, int rotation,
 	                                        double ts);
-	private native void NativeAxisMove(int id, int axis,
-	                                   float value, double ts);
 	private native void NativeButtonDown(int id, int button, double ts);
 	private native void NativeButtonUp(int id, int button, double ts);
 	private native void NativeDensity(float density);
@@ -323,16 +321,6 @@ implements Handler.Callback,
 	private boolean mEnableMagnetometer  = false;
 	private boolean mEnableGyroscope     = false;
 
-	// axis values
-	private float AX1 = 0.0F;
-	private float AY1 = 0.0F;
-	private float AX2 = 0.0F;
-	private float AY2 = 0.0F;
-	private float AHX = 0.0F;
-	private float AHY = 0.0F;
-	private float ART = 0.0F;
-	private float ALT = 0.0F;
-
 	private static boolean isGameKey(int keycode)
 	{
 		if((keycode == KeyEvent.KEYCODE_DPAD_CENTER) ||
@@ -407,15 +395,6 @@ implements Handler.Callback,
 			return ascii;
 		}
 		return 0;
-	}
-
-	private static float denoiseAxis(float value)
-	{
-		if(Math.abs(value) < 0.05F)
-		{
-			return 0.0F;
-		}
-		return value;
 	}
 
 	private static double getTimestamp(double t0)
@@ -536,87 +515,6 @@ implements Handler.Callback,
 		}
 
 		return true;
-	}
-
-	@Override
-	public boolean onGenericMotionEvent(MotionEvent event)
-	{
-		int    source = event.getSource();
-		int    action = event.getAction();
-		int    id     = event.getDeviceId();
-		double ts     = getTimestamp(event.getEventTime());
-		if((source & InputDevice.SOURCE_CLASS_JOYSTICK) != 0)
-		{
-			if(action == MotionEvent.ACTION_MOVE)
-			{
-				// process the joystick movement...
-				float ax1 = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_X));
-				float ay1 = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_Y));
-				float ax2 = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_Z));
-				float ay2 = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_RZ));
-				float ahx = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_HAT_X));
-				float ahy = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_HAT_Y));
-
-				float art = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_RTRIGGER));
-				if(art == 0.0f)
-				{
-					art = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_GAS));
-					if(art == 0.0f)
-					{
-						art = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_THROTTLE));
-					}
-				}
-
-				float alt = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_LTRIGGER));
-				if(alt == 0.0f)
-				{
-					alt = denoiseAxis(event.getAxisValue(MotionEvent.AXIS_BRAKE));
-				}
-
-				if(ax1 != AX1)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_X, ax1, ts);
-					AX1 = ax1;
-				}
-				if(ay1 != AY1)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_Y, ay1, ts);
-					AY1 = ay1;
-				}
-				if(ax2 != AX2)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_Z, ax2, ts);
-					AX2 = ax2;
-				}
-				if(ay2 != AY2)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_RZ, ay2, ts);
-					AY2 = ay2;
-				}
-				if(ahx != AHX)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_HAT_X, ahx, ts);
-					AHX = ahx;
-				}
-				if(ahy != AHY)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_HAT_Y, ahy, ts);
-					AHY = ahy;
-				}
-				if(art != ART)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_RTRIGGER, art, ts);
-					ART = art;
-				}
-				if(alt != ALT)
-				{
-					NativeAxisMove(id, MotionEvent.AXIS_LTRIGGER, alt, ts);
-					ALT = alt;
-				}
-				return true;
-			}
-		}
-		return super.onGenericMotionEvent(event);
 	}
 
 	/*
