@@ -52,6 +52,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import com.jeffboody.vkk.VKKGpsService;
 import java.util.LinkedList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -86,16 +87,20 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_ON  = 2;
 	private static final int VKK_PLATFORM_CMD_CHECK_PERMISSIONS = 3;
 	private static final int VKK_PLATFORM_CMD_EXIT              = 4;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF     = 5;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON      = 6;
-	private static final int VKK_PLATFORM_CMD_LOADURL           = 7;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF  = 8;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON   = 9;
-	private static final int VKK_PLATFORM_CMD_PLAY_CLICK        = 10;
-	private static final int VKK_PLATFORM_CMD_REQ_LOCATION_PERM = 11;
-	private static final int VKK_PLATFORM_CMD_REQ_STORAGE_PERM  = 12;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE      = 13;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW      = 14;
+	private static final int VKK_PLATFORM_CMD_GPS_OFF           = 5;
+	private static final int VKK_PLATFORM_CMD_GPS_ON            = 6;
+	private static final int VKK_PLATFORM_CMD_GPS_RECORD        = 7;
+	private static final int VKK_PLATFORM_CMD_GPS_PAUSE         = 8;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF     = 9;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON      = 10;
+	private static final int VKK_PLATFORM_CMD_LOADURL           = 11;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF  = 12;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON   = 13;
+	private static final int VKK_PLATFORM_CMD_PLAY_CLICK        = 14;
+	private static final int VKK_PLATFORM_CMD_REQ_LOCATION_PERM = 15;
+	private static final int VKK_PLATFORM_CMD_REQ_STORAGE_PERM  = 16;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE      = 17;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW      = 18;
 
 	// permissions
 	private static final int VKK_PERMISSION_LOCATION = 1;
@@ -103,6 +108,10 @@ implements Handler.Callback,
 
 	private static LinkedList<Integer> mCmdQueue = new LinkedList<Integer>();
 	private static Lock                mCmdLock  = new ReentrantLock();
+
+	// app attributes
+	private String mAppName        = "vkk";
+	private int    mIcNotification = 0;
 
 	// "singleton" used for callbacks
 	// handler is used to trigger commands on UI thread
@@ -118,6 +127,7 @@ implements Handler.Callback,
 	private void DrainCommandQueue(boolean handler)
 	{
 		mCmdLock.lock();
+		boolean cmd_gps_enable = false;
 		try
 		{
 			while(mCmdQueue.size() > 0)
@@ -251,6 +261,42 @@ implements Handler.Callback,
 						finish();
 					}
 				}
+				else if(cmd == VKK_PLATFORM_CMD_GPS_ON)
+				{
+					VKKGpsService s = VKKGpsService.getSingleton();
+					if(s != null)
+					{
+						s.cmdGpsEnable();
+					}
+					else if(handler)
+					{
+						cmd_gps_enable = true;
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_GPS_OFF)
+				{
+					VKKGpsService s = VKKGpsService.getSingleton();
+					if(s != null)
+					{
+						s.cmdGpsDisable();
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_GPS_RECORD)
+				{
+					VKKGpsService s = VKKGpsService.getSingleton();
+					if(s != null)
+					{
+						s.cmdGpsRecord(mAppName, mIcNotification);
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_GPS_PAUSE)
+				{
+					VKKGpsService s = VKKGpsService.getSingleton();
+					if(s != null)
+					{
+						s.cmdGpsPause();
+					}
+				}
 				else
 				{
 					Log.w(TAG, "unknown cmd=" + cmd);
@@ -260,6 +306,18 @@ implements Handler.Callback,
 		catch(Exception e)
 		{
 			Log.e(TAG, "exception: " + e);
+		}
+
+		// handle special case
+		// where app shut down for long period,
+		// Android destroys background GPS service,
+		// app is relaunched and tries to enable GPS
+		// before service has restarted
+		if(cmd_gps_enable)
+		{
+			mHandler.sendMessageDelayed(Message.obtain(mHandler,
+			                            VKK_PLATFORM_CMD_GPS_ON), 16);
+			mCmdQueue.add(VKK_PLATFORM_CMD_GPS_ON);
 		}
 		mCmdLock.unlock();
 	}
@@ -417,6 +475,16 @@ implements Handler.Callback,
 		mHandler = new Handler(this);
 	}
 
+	public void onCreate(Bundle savedInstanceState,
+	                     String app_name, int ic_notification)
+	{
+		super.onCreate(savedInstanceState);
+
+		mHandler        = new Handler(this);
+		mAppName        = app_name;
+		mIcNotification = ic_notification;
+	}
+
 	@Override
 	protected void onResume()
 	{
@@ -433,6 +501,18 @@ implements Handler.Callback,
 		                         getSystemService(Context.WINDOW_SERVICE);
 		wm.getDefaultDisplay().getMetrics(metrics);
 		NativeDensity(metrics.density);
+
+		// start service if needed
+		VKKGpsService s = VKKGpsService.getSingleton();
+		if(s != null)
+		{
+			s.onActivityResume();
+		}
+		else
+		{
+			Intent intent = new Intent(this, VKKGpsService.class);
+			startService(intent);
+		}
 
 		if(mEnableAccelerometer)
 		{
@@ -467,6 +547,12 @@ implements Handler.Callback,
 		mEnableMagnetometer  = enable_magnetometer;
 		mEnableGyroscope     = enable_gyroscope;
 
+		VKKGpsService s = VKKGpsService.getSingleton();
+		if(s != null)
+		{
+			s.onActivityPause();
+		}
+
 		super.onPause();
 	}
 
@@ -474,6 +560,10 @@ implements Handler.Callback,
 	protected void onDestroy()
 	{
 		mHandler = null;
+
+		Intent intent = new Intent(this, VKKGpsService.class);
+		stopService(intent);
+
 		super.onDestroy();
 	}
 
