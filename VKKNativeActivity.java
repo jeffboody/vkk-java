@@ -110,8 +110,9 @@ implements Handler.Callback,
 	private static Lock                mCmdLock  = new ReentrantLock();
 
 	// app attributes
-	private String mAppName        = "vkk";
-	private int    mIcNotification = 0;
+	private String  mAppName        = "vkk";
+	private int     mIcNotification = 0;
+	private boolean mUseGps         = false;
 
 	// "singleton" used for callbacks
 	// handler is used to trigger commands on UI thread
@@ -313,7 +314,7 @@ implements Handler.Callback,
 		// Android destroys background GPS service,
 		// app is relaunched and tries to enable GPS
 		// before service has restarted
-		if(cmd_gps_enable)
+		if(mUseGps && cmd_gps_enable)
 		{
 			mHandler.sendMessageDelayed(Message.obtain(mHandler,
 			                            VKK_PLATFORM_CMD_GPS_ON), 16);
@@ -476,13 +477,16 @@ implements Handler.Callback,
 	}
 
 	public void onCreate(Bundle savedInstanceState,
-	                     String app_name, int ic_notification)
+	                     String app_name,
+	                     int ic_notification,
+	                     boolean use_gps)
 	{
 		super.onCreate(savedInstanceState);
 
 		mHandler        = new Handler(this);
 		mAppName        = app_name;
 		mIcNotification = ic_notification;
+		mUseGps         = use_gps;
 	}
 
 	@Override
@@ -508,7 +512,7 @@ implements Handler.Callback,
 		{
 			s.onActivityResume();
 		}
-		else
+		else if(mUseGps)
 		{
 			Intent intent = new Intent(this, VKKGpsService.class);
 			startService(intent);
