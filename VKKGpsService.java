@@ -91,7 +91,8 @@ implements LocationListener
 		}
 	}
 
-	void cmdGpsRecord(String app_name, int ic_notification)
+	void cmdGpsRecord(String app_name, Intent intent,
+	                  int ic_notification)
 	{
 		Log.i(TAG, "cmdGpsRecord mGpsRecord=" + mGpsRecord);
 
@@ -107,8 +108,8 @@ implements LocationListener
 			     getSystemService(Context.NOTIFICATION_SERVICE);
 			nm.createNotificationChannel(nc);
 
-			Intent i = new Intent(this, VKKNativeActivity.class);
-			PendingIntent pi = PendingIntent.getActivity(this, 0, i, 0);
+			PendingIntent pi = PendingIntent.getActivity(this, 0,
+			                                             intent, 0);
 			Notification n = new NotificationCompat.Builder(this, app_name)
 			.setPriority(Notification.PRIORITY_DEFAULT)
 			.setCategory(Notification.CATEGORY_SERVICE)

@@ -287,7 +287,8 @@ implements Handler.Callback,
 					VKKGpsService s = VKKGpsService.getSingleton();
 					if(s != null)
 					{
-						s.cmdGpsRecord(mAppName, mIcNotification);
+						s.cmdGpsRecord(mAppName, makeIntent(),
+						               mIcNotification);
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_GPS_PAUSE)
@@ -791,5 +792,14 @@ implements Handler.Callback,
 				NativeGrantPermission(VKK_PERMISSION_STORAGE);
 			}
 		}
+	}
+
+	/*
+	 * Intent interface
+	 */
+
+	public Intent makeIntent()
+	{
+		return new Intent(this, VKKNativeActivity.class);
 	}
 }
