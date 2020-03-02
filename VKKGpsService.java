@@ -25,7 +25,6 @@ package com.jeffboody.vkk;
 
 import android.app.Service;
 import android.app.Notification;
-import android.app.Notification.Builder;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -37,7 +36,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
-import android.support.v4.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
 import android.util.Log;
 
 public class VKKGpsService
