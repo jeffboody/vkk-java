@@ -34,6 +34,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.media.AudioManager;
+import android.media.RingtoneManager;
+import android.media.Ringtone;
 import android.location.LocationManager;
 import android.location.Location;
 import android.net.Uri;
@@ -94,10 +96,11 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF  = 12;
 	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON   = 13;
 	private static final int VKK_PLATFORM_CMD_PLAY_CLICK        = 14;
-	private static final int VKK_PLATFORM_CMD_REQ_LOCATION_PERM = 15;
-	private static final int VKK_PLATFORM_CMD_REQ_STORAGE_PERM  = 16;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE      = 17;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW      = 18;
+	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY       = 15;
+	private static final int VKK_PLATFORM_CMD_REQ_LOCATION_PERM = 16;
+	private static final int VKK_PLATFORM_CMD_REQ_STORAGE_PERM  = 17;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE      = 18;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW      = 19;
 
 	// permissions
 	private static final int VKK_PERMISSION_LOCATION = 1;
@@ -161,6 +164,15 @@ implements Handler.Callback,
 					{
 						AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 						am.playSoundEffect(AudioManager.FX_KEY_CLICK, 0.5F);
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_PLAY_NOTIFY)
+				{
+					if(handler)
+					{
+						Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+						Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+						r.play();
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_CHECK_PERMISSIONS)
