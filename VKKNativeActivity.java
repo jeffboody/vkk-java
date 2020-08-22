@@ -71,7 +71,8 @@ implements Handler.Callback,
 	private native void NativeButtonDown(int id, int button, double ts);
 	private native void NativeButtonUp(int id, int button, double ts);
 	private native void NativeDensity(float density);
-	private native void NativeGrantPermission(int permission);
+	private native void NativePermissionStatus(int permission,
+	                                           int status);
 	private native void NativeGyroscope(float ax, float ay, float az,
 	                                    double ts);
 	private native void NativeKeyDown(int keycode, int meta, double ts);
@@ -82,29 +83,31 @@ implements Handler.Callback,
 	                                       float gfz);
 
 	// native commands
-	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF = 1;
-	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_ON  = 2;
-	private static final int VKK_PLATFORM_CMD_CHECK_PERMISSIONS = 3;
-	private static final int VKK_PLATFORM_CMD_EXIT              = 4;
-	private static final int VKK_PLATFORM_CMD_GPS_OFF           = 5;
-	private static final int VKK_PLATFORM_CMD_GPS_ON            = 6;
-	private static final int VKK_PLATFORM_CMD_GPS_RECORD        = 7;
-	private static final int VKK_PLATFORM_CMD_GPS_PAUSE         = 8;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF     = 9;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON      = 10;
-	private static final int VKK_PLATFORM_CMD_LOADURL           = 11;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF  = 12;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON   = 13;
-	private static final int VKK_PLATFORM_CMD_PLAY_CLICK        = 14;
-	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY       = 15;
-	private static final int VKK_PLATFORM_CMD_REQ_LOCATION_PERM = 16;
-	private static final int VKK_PLATFORM_CMD_REQ_STORAGE_PERM  = 17;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE      = 18;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW      = 19;
+	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF        = 1;
+	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_ON         = 2;
+	private static final int VKK_PLATFORM_CMD_CHECK_PERMISSIONS        = 3;
+	private static final int VKK_PLATFORM_CMD_EXIT                     = 4;
+	private static final int VKK_PLATFORM_CMD_GPS_OFF                  = 5;
+	private static final int VKK_PLATFORM_CMD_GPS_ON                   = 6;
+	private static final int VKK_PLATFORM_CMD_GPS_RECORD               = 7;
+	private static final int VKK_PLATFORM_CMD_GPS_PAUSE                = 8;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF            = 9;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON             = 10;
+	private static final int VKK_PLATFORM_CMD_LOADURL                  = 11;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF         = 12;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON          = 13;
+	private static final int VKK_PLATFORM_CMD_PLAY_CLICK               = 14;
+	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY              = 15;
+	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM       = 16;
+	private static final int VKK_PLATFORM_CMD_BACKGROUND_LOCATION_PERM = 17;
+	private static final int VKK_PLATFORM_CMD_STORAGE_PERM             = 18;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 19;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 20;
 
 	// permissions
-	private static final int VKK_PERMISSION_LOCATION = 1;
-	private static final int VKK_PERMISSION_STORAGE  = 2;
+	private static final int VKK_PERMISSION_FINE_LOCATION       = 1;
+	private static final int VKK_PERMISSION_BACKGROUND_LOCATION = 2;
+	private static final int VKK_PERMISSION_STORAGE             = 3;
 
 	private static LinkedList<Integer> mCmdQueue = new LinkedList<Integer>();
 	private static Lock                mCmdLock  = new ReentrantLock();
@@ -180,35 +183,55 @@ implements Handler.Callback,
 					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativeGrantPermission(VKK_PERMISSION_LOCATION);
+						NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
+					}
+
+					if(checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+					   PackageManager.PERMISSION_GRANTED)
+					{
+						NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
 					}
 
 					if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativeGrantPermission(VKK_PERMISSION_STORAGE);
+						NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
 					}
 				}
-				else if(cmd == VKK_PLATFORM_CMD_REQ_LOCATION_PERM)
+				else if(cmd == VKK_PLATFORM_CMD_FINE_LOCATION_PERM)
 				{
 					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativeGrantPermission(VKK_PERMISSION_LOCATION);
+						NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
 					}
 					else
 					{
 						String[] perm = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
 						ActivityCompat.requestPermissions(this, perm,
-						                                  VKK_PERMISSION_LOCATION);
+						                                  VKK_PERMISSION_FINE_LOCATION);
 					}
 				}
-				else if(cmd == VKK_PLATFORM_CMD_REQ_STORAGE_PERM)
+				else if(cmd == VKK_PLATFORM_CMD_BACKGROUND_LOCATION_PERM)
+				{
+					if(checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+					   PackageManager.PERMISSION_GRANTED)
+					{
+						NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
+					}
+					else
+					{
+						String[] perm = new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION};
+						ActivityCompat.requestPermissions(this, perm,
+						                                  VKK_PERMISSION_BACKGROUND_LOCATION);
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_STORAGE_PERM)
 				{
 					if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativeGrantPermission(VKK_PERMISSION_STORAGE);
+						NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
 					}
 					else
 					{
@@ -784,12 +807,28 @@ implements Handler.Callback,
 	                                       String[] permissions,
 	                                       int[] grantResults)
 	{
-		if(requestCode == VKK_PERMISSION_LOCATION)
+		if(requestCode == VKK_PERMISSION_FINE_LOCATION)
 		{
 			if((grantResults.length > 0) &&
 			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
 			{
-				NativeGrantPermission(VKK_PERMISSION_LOCATION);
+				NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
+			}
+			else
+			{
+				NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 0);
+			}
+		}
+		else if(requestCode == VKK_PERMISSION_BACKGROUND_LOCATION)
+		{
+			if((grantResults.length > 0) &&
+			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
+			{
+				NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
+			}
+			else
+			{
+				NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 0);
 			}
 		}
 		else if(requestCode == VKK_PERMISSION_STORAGE)
@@ -797,7 +836,11 @@ implements Handler.Callback,
 			if((grantResults.length > 0) &&
 			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
 			{
-				NativeGrantPermission(VKK_PERMISSION_STORAGE);
+				NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
+			}
+			else
+			{
+				NativePermissionStatus(VKK_PERMISSION_STORAGE, 0);
 			}
 		}
 	}
