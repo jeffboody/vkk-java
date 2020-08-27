@@ -100,14 +100,16 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY              = 15;
 	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM       = 16;
 	private static final int VKK_PLATFORM_CMD_BACKGROUND_LOCATION_PERM = 17;
-	private static final int VKK_PLATFORM_CMD_STORAGE_PERM             = 18;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 19;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 20;
+	private static final int VKK_PLATFORM_CMD_READ_STORAGE_PERM        = 18;
+	private static final int VKK_PLATFORM_CMD_WRITE_STORAGE_PERM       = 19;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 20;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 21;
 
 	// permissions
 	private static final int VKK_PERMISSION_FINE_LOCATION       = 1;
 	private static final int VKK_PERMISSION_BACKGROUND_LOCATION = 2;
-	private static final int VKK_PERMISSION_STORAGE             = 3;
+	private static final int VKK_PERMISSION_READ_STORAGE        = 3;
+	private static final int VKK_PERMISSION_WRITE_STORAGE       = 4;
 
 	private static LinkedList<Integer> mCmdQueue = new LinkedList<Integer>();
 	private static Lock                mCmdLock  = new ReentrantLock();
@@ -192,10 +194,16 @@ implements Handler.Callback,
 						NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
 					}
 
+					if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
+					   PackageManager.PERMISSION_GRANTED)
+					{
+						NativePermissionStatus(VKK_PERMISSION_READ_STORAGE, 1);
+					}
+
 					if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
+						NativePermissionStatus(VKK_PERMISSION_WRITE_STORAGE, 1);
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_FINE_LOCATION_PERM)
@@ -226,17 +234,30 @@ implements Handler.Callback,
 						                                  VKK_PERMISSION_BACKGROUND_LOCATION);
 					}
 				}
-				else if(cmd == VKK_PLATFORM_CMD_STORAGE_PERM)
+				else if(cmd == VKK_PLATFORM_CMD_READ_STORAGE_PERM)
 				{
-					if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+					if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) !=
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
+						String[] perm = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
+						ActivityCompat.requestPermissions(this, perm, VKK_PERMISSION_READ_STORAGE);
 					}
 					else
 					{
+						NativePermissionStatus(VKK_PERMISSION_READ_STORAGE, 1);
+					}
+				}
+				else if(cmd == VKK_PLATFORM_CMD_WRITE_STORAGE_PERM)
+				{
+					if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+					   PackageManager.PERMISSION_GRANTED)
+					{
 						String[] perm = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
-						ActivityCompat.requestPermissions(this, perm, VKK_PERMISSION_STORAGE);
+						ActivityCompat.requestPermissions(this, perm, VKK_PERMISSION_WRITE_STORAGE);
+					}
+					else
+					{
+						NativePermissionStatus(VKK_PERMISSION_READ_STORAGE, 1);
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_LOADURL)
@@ -831,16 +852,28 @@ implements Handler.Callback,
 				NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 0);
 			}
 		}
-		else if(requestCode == VKK_PERMISSION_STORAGE)
+		else if(requestCode == VKK_PERMISSION_READ_STORAGE)
 		{
 			if((grantResults.length > 0) &&
 			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
 			{
-				NativePermissionStatus(VKK_PERMISSION_STORAGE, 1);
+				NativePermissionStatus(VKK_PERMISSION_READ_STORAGE, 1);
 			}
 			else
 			{
-				NativePermissionStatus(VKK_PERMISSION_STORAGE, 0);
+				NativePermissionStatus(VKK_PERMISSION_READ_STORAGE, 0);
+			}
+		}
+		else if(requestCode == VKK_PERMISSION_WRITE_STORAGE)
+		{
+			if((grantResults.length > 0) &&
+			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
+			{
+				NativePermissionStatus(VKK_PERMISSION_WRITE_STORAGE, 1);
+			}
+			else
+			{
+				NativePermissionStatus(VKK_PERMISSION_WRITE_STORAGE, 0);
 			}
 		}
 	}
