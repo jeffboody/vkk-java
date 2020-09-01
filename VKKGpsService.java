@@ -110,7 +110,6 @@ implements LocationListener
 			PendingIntent pi = PendingIntent.getActivity(this, 0,
 			                                             intent, 0);
 			Notification n = new NotificationCompat.Builder(this, app_name)
-			.setPriority(Notification.PRIORITY_DEFAULT)
 			.setCategory(Notification.CATEGORY_SERVICE)
 			.setContentTitle("GPX track started")
 			.setContentText("Tap to view track.")
@@ -310,6 +309,7 @@ implements LocationListener
 	{
 	}
 
+	@Deprecated
 	public void onStatusChanged(String provider, int status, Bundle extras)
 	{
 	}
