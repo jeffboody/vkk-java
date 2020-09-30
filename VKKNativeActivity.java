@@ -548,11 +548,6 @@ implements Handler.Callback,
 	{
 		super.onResume();
 
-		View decorView = getWindow().getDecorView();
-		int  ui_flags  = View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-		                 View.SYSTEM_UI_FLAG_FULLSCREEN;
-		decorView.setSystemUiVisibility(ui_flags);
-
 		DisplayMetrics metrics = new DisplayMetrics();
 		WindowManager  wm      = (WindowManager)
 		                         getSystemService(Context.WINDOW_SERVICE);
