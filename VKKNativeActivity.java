@@ -99,17 +99,15 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_PLAY_CLICK               = 14;
 	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY              = 15;
 	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM       = 16;
-	private static final int VKK_PLATFORM_CMD_BACKGROUND_LOCATION_PERM = 17;
-	private static final int VKK_PLATFORM_CMD_READ_STORAGE_PERM        = 18;
-	private static final int VKK_PLATFORM_CMD_WRITE_STORAGE_PERM       = 19;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 20;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 21;
+	private static final int VKK_PLATFORM_CMD_READ_STORAGE_PERM        = 17;
+	private static final int VKK_PLATFORM_CMD_WRITE_STORAGE_PERM       = 18;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 19;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 20;
 
 	// permissions
 	private static final int VKK_PERMISSION_FINE_LOCATION       = 1;
-	private static final int VKK_PERMISSION_BACKGROUND_LOCATION = 2;
-	private static final int VKK_PERMISSION_READ_STORAGE        = 3;
-	private static final int VKK_PERMISSION_WRITE_STORAGE       = 4;
+	private static final int VKK_PERMISSION_READ_STORAGE        = 2;
+	private static final int VKK_PERMISSION_WRITE_STORAGE       = 3;
 
 	private static LinkedList<Integer> mCmdQueue = new LinkedList<Integer>();
 	private static Lock                mCmdLock  = new ReentrantLock();
@@ -188,12 +186,6 @@ implements Handler.Callback,
 						NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
 					}
 
-					if(checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
-					   PackageManager.PERMISSION_GRANTED)
-					{
-						NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
-					}
-
 					if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
@@ -218,20 +210,6 @@ implements Handler.Callback,
 						String[] perm = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
 						ActivityCompat.requestPermissions(this, perm,
 						                                  VKK_PERMISSION_FINE_LOCATION);
-					}
-				}
-				else if(cmd == VKK_PLATFORM_CMD_BACKGROUND_LOCATION_PERM)
-				{
-					if(checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
-					   PackageManager.PERMISSION_GRANTED)
-					{
-						NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
-					}
-					else
-					{
-						String[] perm = new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION};
-						ActivityCompat.requestPermissions(this, perm,
-						                                  VKK_PERMISSION_BACKGROUND_LOCATION);
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_READ_STORAGE_PERM)
@@ -365,7 +343,7 @@ implements Handler.Callback,
 
 		// handle special case
 		// where app shut down for long period,
-		// Android destroys background GPS service,
+		// Android destroys the GPS service,
 		// app is relaunched and tries to enable GPS
 		// before service has restarted
 		if(mUseGps && cmd_gps_enable)
@@ -833,18 +811,6 @@ implements Handler.Callback,
 			else
 			{
 				NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 0);
-			}
-		}
-		else if(requestCode == VKK_PERMISSION_BACKGROUND_LOCATION)
-		{
-			if((grantResults.length > 0) &&
-			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
-			{
-				NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 1);
-			}
-			else
-			{
-				NativePermissionStatus(VKK_PERMISSION_BACKGROUND_LOCATION, 0);
 			}
 		}
 		else if(requestCode == VKK_PERMISSION_READ_STORAGE)
