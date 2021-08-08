@@ -24,6 +24,7 @@
 package com.jeffboody.vkk;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.NativeActivity;
 import android.content.Context;
 import android.content.Intent;
@@ -81,28 +82,30 @@ implements Handler.Callback,
 	                                       float mz, double ts,
 	                                       float gfx, float gfy,
 	                                       float gfz);
+	private native void NativeDocumentOpenTree(String uri);
 
 	// native commands
-	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF        = 1;
-	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_ON         = 2;
-	private static final int VKK_PLATFORM_CMD_CHECK_PERMISSIONS        = 3;
-	private static final int VKK_PLATFORM_CMD_EXIT                     = 4;
-	private static final int VKK_PLATFORM_CMD_GPS_OFF                  = 5;
-	private static final int VKK_PLATFORM_CMD_GPS_ON                   = 6;
-	private static final int VKK_PLATFORM_CMD_GPS_RECORD               = 7;
-	private static final int VKK_PLATFORM_CMD_GPS_PAUSE                = 8;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF            = 9;
-	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON             = 10;
-	private static final int VKK_PLATFORM_CMD_LOADURL                  = 11;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF         = 12;
-	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON          = 13;
-	private static final int VKK_PLATFORM_CMD_PLAY_CLICK               = 14;
-	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY              = 15;
-	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM       = 16;
-	private static final int VKK_PLATFORM_CMD_READ_STORAGE_PERM        = 17;
-	private static final int VKK_PLATFORM_CMD_WRITE_STORAGE_PERM       = 18;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE             = 19;
-	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW             = 20;
+	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF  = 1;
+	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_ON   = 2;
+	private static final int VKK_PLATFORM_CMD_CHECK_PERMISSIONS  = 3;
+	private static final int VKK_PLATFORM_CMD_EXIT               = 4;
+	private static final int VKK_PLATFORM_CMD_GPS_OFF            = 5;
+	private static final int VKK_PLATFORM_CMD_GPS_ON             = 6;
+	private static final int VKK_PLATFORM_CMD_GPS_RECORD         = 7;
+	private static final int VKK_PLATFORM_CMD_GPS_PAUSE          = 8;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_OFF      = 9;
+	private static final int VKK_PLATFORM_CMD_GYROSCOPE_ON       = 10;
+	private static final int VKK_PLATFORM_CMD_LOADURL            = 11;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_OFF   = 12;
+	private static final int VKK_PLATFORM_CMD_MAGNETOMETER_ON    = 13;
+	private static final int VKK_PLATFORM_CMD_PLAY_CLICK         = 14;
+	private static final int VKK_PLATFORM_CMD_PLAY_NOTIFY        = 15;
+	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM = 16;
+	private static final int VKK_PLATFORM_CMD_READ_STORAGE_PERM  = 17;
+	private static final int VKK_PLATFORM_CMD_WRITE_STORAGE_PERM = 18;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE       = 19;
+	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW       = 20;
+	private static final int VKK_PLATFORM_CMD_DOCUMENT_OPEN_TREE = 21;
 
 	// permissions
 	private static final int VKK_PERMISSION_FINE_LOCATION       = 1;
@@ -121,6 +124,9 @@ implements Handler.Callback,
 	// handler is used to trigger commands on UI thread
 	private static Handler mHandler = null;
 	private static String  mURL     = "";
+
+	// activity result codes
+	private static final int VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE = 1;
 
 	/*
 	 * Command Queue - A queue is needed to ensure commands
@@ -240,15 +246,9 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_LOADURL)
 				{
-					try
-					{
-						Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(mURL));
-						startActivity(intent);
-					}
-					catch(Exception e)
-					{
-						// ignore
-					}
+					Intent intent = new Intent(Intent.ACTION_VIEW,
+					                           Uri.parse(mURL));
+					startActivity(intent);
 				}
 				else if(cmd == VKK_PLATFORM_CMD_SOFTKEY_HIDE)
 				{
@@ -330,6 +330,15 @@ implements Handler.Callback,
 						s.cmdGpsPause();
 					}
 				}
+				else if(cmd == VKK_PLATFORM_CMD_DOCUMENT_OPEN_TREE)
+				{
+					Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+					intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+					intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+					intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+					startActivityForResult(intent,
+					                       VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE);
+				}
 				else
 				{
 					Log.w(TAG, "unknown cmd=" + cmd);
@@ -363,19 +372,20 @@ implements Handler.Callback,
 	{
 		try
 		{
+			mCmdLock.lock();
+
 			if(cmd == VKK_PLATFORM_CMD_LOADURL)
 			{
 				mURL = msg;
 			}
 
-			mCmdLock.lock();
 			mHandler.sendMessage(Message.obtain(mHandler, cmd));
 			mCmdQueue.add(cmd);
 			mCmdLock.unlock();
 		}
 		catch(Exception e)
 		{
-			// ignore
+			Log.e(TAG, "exception: " + e);
 		}
 	}
 
@@ -635,6 +645,45 @@ implements Handler.Callback,
 		}
 
 		return true;
+	}
+
+	@Override
+	public void onActivityResult(int requestCode,
+	                             int resultCode,
+	                             Intent resultData)
+	{
+		Uri    uri;
+		String path;
+		int    flags;
+		try
+		{
+			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE)
+			{
+				if((resultCode == Activity.RESULT_OK) && (resultData != null))
+				{
+					uri   = resultData.getData();
+					path  = uri.getPath();
+					flags = resultData.getFlags() &
+					        (Intent.FLAG_GRANT_READ_URI_PERMISSION |
+					         Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+					getContentResolver().takePersistableUriPermission(uri, flags);
+					NativeDocumentOpenTree(path);
+				}
+				else
+				{
+					NativeDocumentOpenTree("");
+				}
+			}
+		}
+		catch(Exception e)
+		{
+			Log.e(TAG, "exception: " + e);
+
+			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE)
+			{
+				NativeDocumentOpenTree("");
+			}
+		}
 	}
 
 	/*
