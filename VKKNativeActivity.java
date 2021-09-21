@@ -44,6 +44,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import androidx.core.app.ActivityCompat;
 import android.util.DisplayMetrics;
@@ -52,7 +53,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-
+import org.json.JSONObject;
 import java.util.LinkedList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -82,7 +83,7 @@ implements Handler.Callback,
 	                                       float mz, double ts,
 	                                       float gfx, float gfy,
 	                                       float gfz);
-	private native void NativeDocumentOpenTree(String uri);
+	private native void NativeDocument(String uri, int fd);
 
 	// native commands
 	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF  = 1;
@@ -103,7 +104,8 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_FINE_LOCATION_PERM = 16;
 	private static final int VKK_PLATFORM_CMD_SOFTKEY_HIDE       = 17;
 	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW       = 18;
-	private static final int VKK_PLATFORM_CMD_DOCUMENT_OPEN_TREE = 19;
+	private static final int VKK_PLATFORM_CMD_DOCUMENT_CREATE    = 19;
+	private static final int VKK_PLATFORM_CMD_DOCUMENT_OPEN      = 20;
 
 	// permissions
 	private static final int VKK_PERMISSION_FINE_LOCATION = 1;
@@ -118,11 +120,12 @@ implements Handler.Callback,
 
 	// "singleton" used for callbacks
 	// handler is used to trigger commands on UI thread
-	private static Handler mHandler = null;
-	private static String  mURL     = "";
+	private static Handler    mHandler = null;
+	private static JSONObject mMsgUrl  = null;
+	private static JSONObject mMsgDoc  = null;
 
 	// activity result codes
-	private static final int VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE = 1;
+	private static final int VKK_ACTIVITY_RESULT_DOCUMENT = 1;
 
 	/*
 	 * Command Queue - A queue is needed to ensure commands
@@ -206,7 +209,7 @@ implements Handler.Callback,
 				else if(cmd == VKK_PLATFORM_CMD_LOADURL)
 				{
 					Intent intent = new Intent(Intent.ACTION_VIEW,
-					                           Uri.parse(mURL));
+					                           Uri.parse(mMsgUrl.getString("url")));
 					startActivity(intent);
 				}
 				else if(cmd == VKK_PLATFORM_CMD_SOFTKEY_HIDE)
@@ -289,14 +292,31 @@ implements Handler.Callback,
 						s.cmdGpsPause();
 					}
 				}
-				else if(cmd == VKK_PLATFORM_CMD_DOCUMENT_OPEN_TREE)
+				else if(cmd == VKK_PLATFORM_CMD_DOCUMENT_CREATE)
 				{
-					Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-					intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-					intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-					intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+					Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+					intent.addCategory(Intent.CATEGORY_OPENABLE);
+					intent.setType(mMsgDoc.getString("type"));
+					try
+					{
+						// title is optional
+						intent.putExtra(Intent.EXTRA_TITLE,
+						                mMsgDoc.getString("title"));
+					}
+					catch(Exception e)
+					{
+						// ignore
+					}
 					startActivityForResult(intent,
-					                       VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE);
+					                       VKK_ACTIVITY_RESULT_DOCUMENT);
+				}
+				else if(cmd == VKK_PLATFORM_CMD_DOCUMENT_OPEN)
+				{
+					Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+					intent.addCategory(Intent.CATEGORY_OPENABLE);
+					intent.setType(mMsgDoc.getString("type"));
+					startActivityForResult(intent,
+					                       VKK_ACTIVITY_RESULT_DOCUMENT);
 				}
 				else
 				{
@@ -333,9 +353,20 @@ implements Handler.Callback,
 		{
 			mCmdLock.lock();
 
+			JSONObject tmp = null;
+			if((msg != null) && (msg.equals("") != true))
+			{
+				tmp = new JSONObject(msg);
+			}
+
 			if(cmd == VKK_PLATFORM_CMD_LOADURL)
 			{
-				mURL = msg;
+				mMsgUrl = tmp;
+			}
+			else if((cmd == VKK_PLATFORM_CMD_DOCUMENT_CREATE) ||
+			        (cmd == VKK_PLATFORM_CMD_DOCUMENT_OPEN))
+			{
+				mMsgDoc = tmp;
 			}
 
 			mHandler.sendMessage(Message.obtain(mHandler, cmd));
@@ -612,25 +643,27 @@ implements Handler.Callback,
 	                             Intent resultData)
 	{
 		Uri    uri;
+		String mode;
+		ParcelFileDescriptor pfd;
 		String path;
 		int    flags;
+		int fd;
 		try
 		{
-			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE)
+			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT)
 			{
 				if((resultCode == Activity.RESULT_OK) && (resultData != null))
 				{
-					uri   = resultData.getData();
-					path  = uri.getPath();
-					flags = resultData.getFlags() &
-					        (Intent.FLAG_GRANT_READ_URI_PERMISSION |
-					         Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-					getContentResolver().takePersistableUriPermission(uri, flags);
-					NativeDocumentOpenTree(path);
+					uri  = resultData.getData();
+					mode = mMsgDoc.getString("mode");
+					pfd  = getContentResolver().openFileDescriptor(uri, mode);
+					path = uri.getPath();
+					fd   = pfd.detachFd();
+					NativeDocument(path, fd);
 				}
 				else
 				{
-					NativeDocumentOpenTree("");
+					NativeDocument("", -1);
 				}
 			}
 		}
@@ -638,9 +671,9 @@ implements Handler.Callback,
 		{
 			Log.e(TAG, "exception: " + e);
 
-			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT_OPEN_TREE)
+			if(requestCode == VKK_ACTIVITY_RESULT_DOCUMENT)
 			{
-				NativeDocumentOpenTree("");
+				NativeDocument("", -1);
 			}
 		}
 	}
