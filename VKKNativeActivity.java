@@ -488,14 +488,6 @@ implements Handler.Callback,
 		return 0;
 	}
 
-	private static double getTimestamp(double t0)
-	{
-		// convert "uptime" timestamp to UTC timestamp
-		double now = (double) System.currentTimeMillis();
-		double t1  = (double) SystemClock.uptimeMillis();
-		return (now + t0 - t1)/1000.0;
-	}
-
 	/*
 	 * Activity interface
 	 */
@@ -602,7 +594,8 @@ implements Handler.Callback,
 	{
 		int    ascii = getAscii(keycode, event);
 		int    meta  = event.getMetaState();
-		double ts    = getTimestamp(event.getEventTime());
+		double ms    = (double) event.getEventTime();
+		double ts    = ms/1000.0;
 
 		if(ascii > 0)
 		{
@@ -622,7 +615,8 @@ implements Handler.Callback,
 	{
 		int    ascii = getAscii(keycode, event);
 		int    meta  = event.getMetaState();
-		double ts    = getTimestamp(event.getEventTime());
+		double ms    = (double) event.getEventTime();
+		double ts    = ms/1000.0;
 
 		if(ascii > 0)
 		{
@@ -772,7 +766,8 @@ implements Handler.Callback,
 		}
 
 		// convert nanosecond to second
-		double ts = (double) event.timestamp/1000000000.0;
+		double ns = (double) event.timestamp;
+		double ts = ns/1000000000.0;
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
 		{
 			int   r  = 90*getWindowManager().getDefaultDisplay().getRotation();
