@@ -25,6 +25,8 @@ package com.jeffboody.vkk;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.MemoryInfo;
 import android.app.NativeActivity;
 import android.content.Context;
 import android.content.Intent;
@@ -84,6 +86,10 @@ implements Handler.Callback,
 	                                       float gfx, float gfy,
 	                                       float gfz);
 	private native void NativeDocument(String uri, int fd);
+	private native void NativeMemoryInfo(double available,
+	                                     double threshold,
+	                                     double total,
+	                                     int    low);
 
 	// native commands
 	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF  = 1;
@@ -106,6 +112,7 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW       = 18;
 	private static final int VKK_PLATFORM_CMD_DOCUMENT_CREATE    = 19;
 	private static final int VKK_PLATFORM_CMD_DOCUMENT_OPEN      = 20;
+	private static final int VKK_PLATFORM_CMD_MEMORY_INFO        = 21;
 
 	// permissions
 	private static final int VKK_PERMISSION_FINE_LOCATION = 1;
@@ -317,6 +324,18 @@ implements Handler.Callback,
 					intent.setType(mMsgDoc.getString("type"));
 					startActivityForResult(intent,
 					                       VKK_ACTIVITY_RESULT_DOCUMENT);
+				}
+				else if(cmd == VKK_PLATFORM_CMD_MEMORY_INFO)
+				{
+					ActivityManager am;
+					am = (ActivityManager)
+					     getSystemService(Context.ACTIVITY_SERVICE);
+					MemoryInfo mi = new MemoryInfo();
+					am.getMemoryInfo(mi);
+					NativeMemoryInfo((double) mi.availMem,
+					                 (double) mi.threshold,
+					                 (double) mi.totalMem,
+					                 mi.lowMemory ? 1 : 0);
 				}
 				else
 				{
