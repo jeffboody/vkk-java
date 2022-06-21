@@ -115,7 +115,7 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_MEMORY_INFO        = 21;
 
 	// permissions
-	private static final int VKK_PERMISSION_FINE_LOCATION = 1;
+	private static final int VKK_PLATFORM_PERMISSION_FINE_LOCATION = 1;
 
 	private static LinkedList<Integer> mCmdQueue = new LinkedList<Integer>();
 	private static Lock                mCmdLock  = new ReentrantLock();
@@ -195,7 +195,7 @@ implements Handler.Callback,
 					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
+						NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
 					}
 
 				}
@@ -204,13 +204,13 @@ implements Handler.Callback,
 					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
 					   PackageManager.PERMISSION_GRANTED)
 					{
-						NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
+						NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
 					}
 					else
 					{
 						String[] perm = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
 						ActivityCompat.requestPermissions(this, perm,
-						                                  VKK_PERMISSION_FINE_LOCATION);
+						                                  VKK_PLATFORM_PERMISSION_FINE_LOCATION);
 					}
 				}
 				else if(cmd == VKK_PLATFORM_CMD_LOADURL)
@@ -856,16 +856,16 @@ implements Handler.Callback,
 	                                       String[] permissions,
 	                                       int[] grantResults)
 	{
-		if(requestCode == VKK_PERMISSION_FINE_LOCATION)
+		if(requestCode == VKK_PLATFORM_PERMISSION_FINE_LOCATION)
 		{
 			if((grantResults.length > 0) &&
 			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
 			{
-				NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 1);
+				NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
 			}
 			else
 			{
-				NativePermissionStatus(VKK_PERMISSION_FINE_LOCATION, 0);
+				NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 0);
 			}
 		}
 	}
