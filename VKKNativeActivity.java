@@ -123,9 +123,7 @@ implements Handler.Callback,
 	// app attributes
 	private String  mAppName        = "vkk";
 	private int     mIcNotification = 0;
-	private boolean mGpsAllow       = false;
-	private boolean mGpsEnable      = false;
-	private boolean mGpsRecord      = false;
+	private boolean mUseGps         = false;
 
 	// "singleton" used for callbacks
 	// handler is used to trigger commands on UI thread
@@ -145,9 +143,7 @@ implements Handler.Callback,
 	private void DrainCommandQueue(boolean handler)
 	{
 		mCmdLock.lock();
-
-		boolean retry_gps_enable = false;
-		boolean retry_gps_record = false;
+		boolean cmd_gps_enable = false;
 		try
 		{
 			while(mCmdQueue.size() > 0)
@@ -266,50 +262,42 @@ implements Handler.Callback,
 						finish();
 					}
 				}
-				else if(mGpsAllow && (cmd == VKK_PLATFORM_CMD_GPS_ON))
+				else if(cmd == VKK_PLATFORM_CMD_GPS_ON)
 				{
 					VKKGpsService s = VKKGpsService.getSingleton();
 					if(s != null)
 					{
 						s.cmdGpsEnable();
-						mGpsEnable = true;
 					}
 					else if(handler)
 					{
-						retry_gps_enable = true;
+						cmd_gps_enable = true;
 					}
 				}
-				else if(mGpsAllow && (cmd == VKK_PLATFORM_CMD_GPS_OFF))
+				else if(cmd == VKK_PLATFORM_CMD_GPS_OFF)
 				{
 					VKKGpsService s = VKKGpsService.getSingleton();
 					if(s != null)
 					{
 						s.cmdGpsDisable();
 					}
-					mGpsEnable = false;
 				}
-				else if(mGpsAllow && (cmd == VKK_PLATFORM_CMD_GPS_RECORD))
+				else if(cmd == VKK_PLATFORM_CMD_GPS_RECORD)
 				{
 					VKKGpsService s = VKKGpsService.getSingleton();
 					if(s != null)
 					{
 						s.cmdGpsRecord(mAppName, makeIntent(),
 						               mIcNotification);
-						mGpsRecord = true;
-					}
-					else if(handler)
-					{
-						retry_gps_record = true;
 					}
 				}
-				else if(mGpsAllow && (cmd == VKK_PLATFORM_CMD_GPS_PAUSE))
+				else if(cmd == VKK_PLATFORM_CMD_GPS_PAUSE)
 				{
 					VKKGpsService s = VKKGpsService.getSingleton();
 					if(s != null)
 					{
 						s.cmdGpsPause();
 					}
-					mGpsRecord = false;
 				}
 				else if(cmd == VKK_PLATFORM_CMD_DOCUMENT_CREATE)
 				{
@@ -365,17 +353,11 @@ implements Handler.Callback,
 		// Android destroys the GPS service,
 		// app is relaunched and tries to enable GPS
 		// before service has restarted
-		if(retry_gps_enable)
+		if(mUseGps && cmd_gps_enable)
 		{
 			mHandler.sendMessageDelayed(Message.obtain(mHandler,
-			                            0), 16);
+			                            VKK_PLATFORM_CMD_GPS_ON), 16);
 			mCmdQueue.add(VKK_PLATFORM_CMD_GPS_ON);
-		}
-		if(retry_gps_record)
-		{
-			mHandler.sendMessageDelayed(Message.obtain(mHandler,
-			                            0), 16);
-			mCmdQueue.add(VKK_PLATFORM_CMD_GPS_RECORD);
 		}
 		mCmdLock.unlock();
 	}
@@ -406,7 +388,7 @@ implements Handler.Callback,
 				mMsgDoc = tmp;
 			}
 
-			mHandler.sendMessage(Message.obtain(mHandler, 0));
+			mHandler.sendMessage(Message.obtain(mHandler, cmd));
 			mCmdQueue.add(cmd);
 			mCmdLock.unlock();
 		}
@@ -540,14 +522,14 @@ implements Handler.Callback,
 	public void onCreate(Bundle savedInstanceState,
 	                     String app_name,
 	                     int ic_notification,
-	                     boolean gps_allow)
+	                     boolean use_gps)
 	{
 		super.onCreate(savedInstanceState);
 
 		mHandler        = new Handler(this);
 		mAppName        = app_name;
 		mIcNotification = ic_notification;
-		mGpsAllow       = gps_allow;
+		mUseGps         = use_gps;
 	}
 
 	@Override
@@ -562,35 +544,15 @@ implements Handler.Callback,
 		NativeDensity(metrics.density);
 
 		// start service if needed
-		if(mGpsAllow)
+		VKKGpsService s = VKKGpsService.getSingleton();
+		if(s != null)
 		{
-			VKKGpsService s = VKKGpsService.getSingleton();
-			if(s != null)
-			{
-				s.onActivityResume();
-			}
-			else
-			{
-				Intent intent = new Intent(this, VKKGpsService.class);
-				startService(intent);
-
-				// handle special case
-				// where app shut down for long period
-				mCmdLock.lock();
-				if(mGpsEnable)
-				{
-					mHandler.sendMessageDelayed(Message.obtain(mHandler,
-					                            0), 16);
-					mCmdQueue.add(VKK_PLATFORM_CMD_GPS_ON);
-				}
-				if(mGpsRecord)
-				{
-					mHandler.sendMessageDelayed(Message.obtain(mHandler,
-					                            0), 16);
-					mCmdQueue.add(VKK_PLATFORM_CMD_GPS_RECORD);
-				}
-				mCmdLock.unlock();
-			}
+			s.onActivityResume();
+		}
+		else if(mUseGps)
+		{
+			Intent intent = new Intent(this, VKKGpsService.class);
+			startService(intent);
 		}
 
 		if(mEnableAccelerometer)
@@ -640,16 +602,8 @@ implements Handler.Callback,
 	{
 		mHandler = null;
 
-		VKKGpsService s = VKKGpsService.getSingleton();
-		if(s != null)
-		{
-			Intent intent;
-			intent = new Intent(this, VKKGpsService.class);
-			if(intent != null)
-			{
-				stopService(intent);
-			}
-		}
+		Intent intent = new Intent(this, VKKGpsService.class);
+		stopService(intent);
 
 		super.onDestroy();
 	}
