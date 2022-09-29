@@ -264,7 +264,7 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_GPS_ON)
 				{
-					VKKGpsService s = VKKGpsService.getSingleton();
+					VKKGpsService s = getGpsService();
 					if(s != null)
 					{
 						s.cmdGpsEnable();
@@ -276,7 +276,7 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_GPS_OFF)
 				{
-					VKKGpsService s = VKKGpsService.getSingleton();
+					VKKGpsService s = getGpsService();
 					if(s != null)
 					{
 						s.cmdGpsDisable();
@@ -284,7 +284,7 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_GPS_RECORD)
 				{
-					VKKGpsService s = VKKGpsService.getSingleton();
+					VKKGpsService s = getGpsService();
 					if(s != null)
 					{
 						s.cmdGpsRecord(mAppName, makeIntent(),
@@ -293,7 +293,7 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_GPS_PAUSE)
 				{
-					VKKGpsService s = VKKGpsService.getSingleton();
+					VKKGpsService s = getGpsService();
 					if(s != null)
 					{
 						s.cmdGpsPause();
@@ -511,6 +511,33 @@ implements Handler.Callback,
 	 * Activity interface
 	 */
 
+	private synchronized VKKGpsService getGpsService()
+	{
+		// check if GPS is enabled
+		if(mUseGps == false)
+		{
+			return null;
+		}
+
+		// start service if needed
+		VKKGpsService s = null;
+		try
+		{
+			s = VKKGpsService.getSingleton();
+			if(s == null)
+			{
+				Intent intent = new Intent(this, VKKGpsService.class);
+				startService(intent);
+			}
+		}
+		catch(Exception e)
+		{
+			Log.e(TAG, "exception: " + e);
+		}
+
+		return s;
+	}
+
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -544,15 +571,10 @@ implements Handler.Callback,
 		NativeDensity(metrics.density);
 
 		// start service if needed
-		VKKGpsService s = VKKGpsService.getSingleton();
+		VKKGpsService s = getGpsService();
 		if(s != null)
 		{
 			s.onActivityResume();
-		}
-		else if(mUseGps)
-		{
-			Intent intent = new Intent(this, VKKGpsService.class);
-			startService(intent);
 		}
 
 		if(mEnableAccelerometer)
@@ -588,7 +610,7 @@ implements Handler.Callback,
 		mEnableMagnetometer  = enable_magnetometer;
 		mEnableGyroscope     = enable_gyroscope;
 
-		VKKGpsService s = VKKGpsService.getSingleton();
+		VKKGpsService s = getGpsService();
 		if(s != null)
 		{
 			s.onActivityPause();
