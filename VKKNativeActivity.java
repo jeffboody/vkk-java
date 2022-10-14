@@ -192,8 +192,12 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_CHECK_PERMISSIONS)
 				{
-					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-					   PackageManager.PERMISSION_GRANTED)
+					// Android 12 requires apps to support
+					// FINE and/or COARSE location
+					if((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+					    PackageManager.PERMISSION_GRANTED) ||
+					   (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
+					    PackageManager.PERMISSION_GRANTED))
 					{
 						NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
 					}
@@ -201,14 +205,19 @@ implements Handler.Callback,
 				}
 				else if(cmd == VKK_PLATFORM_CMD_FINE_LOCATION_PERM)
 				{
-					if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-					   PackageManager.PERMISSION_GRANTED)
+					// Android 12 requires apps to support
+					// FINE and/or COARSE location
+					if((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+					    PackageManager.PERMISSION_GRANTED) ||
+					   (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
+					    PackageManager.PERMISSION_GRANTED))
 					{
 						NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
 					}
 					else
 					{
-						String[] perm = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+						String[] perm = new String[]{ Manifest.permission.ACCESS_FINE_LOCATION,
+						                              Manifest.permission.ACCESS_COARSE_LOCATION };
 						ActivityCompat.requestPermissions(this, perm,
 						                                  VKK_PLATFORM_PERMISSION_FINE_LOCATION);
 					}
@@ -880,12 +889,21 @@ implements Handler.Callback,
 	{
 		if(requestCode == VKK_PLATFORM_PERMISSION_FINE_LOCATION)
 		{
-			if((grantResults.length > 0) &&
-			   (grantResults[0] == PackageManager.PERMISSION_GRANTED))
+			boolean has_location = false;
+
+			// Android 12 requires apps to support
+			// FINE and/or COARSE location
+			int i;
+			for(i = 0; i < grantResults.length; ++i)
 			{
-				NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
+				if(grantResults[i] == PackageManager.PERMISSION_GRANTED)
+				{
+					NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 1);
+					has_location = true;
+				}
 			}
-			else
+
+			if(has_location == false)
 			{
 				NativePermissionStatus(VKK_PLATFORM_PERMISSION_FINE_LOCATION, 0);
 			}

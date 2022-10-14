@@ -107,8 +107,9 @@ implements LocationListener
 			     getSystemService(Context.NOTIFICATION_SERVICE);
 			nm.createNotificationChannel(nc);
 
-			PendingIntent pi = PendingIntent.getActivity(this, 0,
-			                                             intent, 0);
+			PendingIntent pi;
+			pi = PendingIntent.getActivity(this, 0, intent,
+			                               PendingIntent.FLAG_IMMUTABLE);
 			Notification n = new NotificationCompat.Builder(this, app_name)
 			.setCategory(Notification.CATEGORY_SERVICE)
 			.setContentTitle("GPX track started")
