@@ -112,7 +112,8 @@ implements Handler.Callback,
 	private static final int VKK_PLATFORM_CMD_SOFTKEY_SHOW       = 18;
 	private static final int VKK_PLATFORM_CMD_DOCUMENT_CREATE    = 19;
 	private static final int VKK_PLATFORM_CMD_DOCUMENT_OPEN      = 20;
-	private static final int VKK_PLATFORM_CMD_MEMORY_INFO        = 21;
+	private static final int VKK_PLATFORM_CMD_DOCUMENT_NAME      = 21;
+	private static final int VKK_PLATFORM_CMD_MEMORY_INFO        = 22;
 
 	// permissions
 	private static final int VKK_PLATFORM_PERMISSION_FINE_LOCATION = 1;
