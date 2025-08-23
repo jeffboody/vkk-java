@@ -48,13 +48,17 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
-import androidx.core.app.ActivityCompat;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import org.json.JSONObject;
 import java.util.LinkedList;
 import java.util.concurrent.locks.Lock;
@@ -90,6 +94,8 @@ implements Handler.Callback,
 	                                     double threshold,
 	                                     double total,
 	                                     int    low);
+	private native void NativeInset(int t, int l,
+	                                int b, int r);
 
 	// native commands
 	private static final int VKK_PLATFORM_CMD_ACCELEROMETER_OFF  = 1;
@@ -548,10 +554,36 @@ implements Handler.Callback,
 		return s;
 	}
 
+	private void initializeWindow()
+	{
+		// edge-to-edge compatibility
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
+		View rootView = findViewById(android.R.id.content);
+
+		// ignore displayCutout for initial implementation to
+		// maintain parity with contentRect design
+		ViewCompat.setOnApplyWindowInsetsListener(rootView, (view, windowInsets) -> {
+			Insets isys = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+			Insets ico  = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
+			Insets ikb  = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+
+			int t = Math.max(isys.top,    ico.top);
+			int l = Math.max(isys.left,   ico.left);
+			int b = Math.max(isys.bottom, ikb.bottom);
+			int r = Math.max(isys.right,  ico.right);
+			NativeInset(t, l, b, r);
+
+			return windowInsets;
+		});
+	}
+
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+
+		initializeWindow();
 
 		mHandler = new Handler(this);
 	}
@@ -562,6 +594,8 @@ implements Handler.Callback,
 	                     boolean use_gps)
 	{
 		super.onCreate(savedInstanceState);
+
+		initializeWindow();
 
 		mHandler        = new Handler(this);
 		mAppName        = app_name;
