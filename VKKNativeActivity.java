@@ -45,12 +45,14 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowMetrics;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -585,7 +587,7 @@ implements Handler.Callback,
 
 		initializeWindow();
 
-		mHandler = new Handler(this);
+		mHandler = new Handler(Looper.getMainLooper(), this);
 	}
 
 	public void onCreate(Bundle savedInstanceState,
@@ -597,7 +599,7 @@ implements Handler.Callback,
 
 		initializeWindow();
 
-		mHandler        = new Handler(this);
+		mHandler        = new Handler(Looper.getMainLooper(), this);
 		mAppName        = app_name;
 		mIcNotification = ic_notification;
 		mUseGps         = use_gps;
@@ -608,11 +610,9 @@ implements Handler.Callback,
 	{
 		super.onResume();
 
-		DisplayMetrics metrics = new DisplayMetrics();
-		WindowManager  wm      = (WindowManager)
-		                         getSystemService(Context.WINDOW_SERVICE);
-		wm.getDefaultDisplay().getMetrics(metrics);
-		NativeDensity(metrics.density);
+		WindowManager windowManager = getSystemService(WindowManager.class);
+		WindowMetrics windowMetrics = windowManager.getCurrentWindowMetrics();
+		NativeDensity(windowMetrics.getDensity());
 
 		// start service if needed
 		VKKGpsService s = getGpsService();
@@ -855,7 +855,7 @@ implements Handler.Callback,
 		double ts = ns/1000000000.0;
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
 		{
-			int   r  = 90*getWindowManager().getDefaultDisplay().getRotation();
+			int   r  = 90*getDisplay().getRotation();
 			float ax = event.values[0];
 			float ay = event.values[1];
 			float az = event.values[2];

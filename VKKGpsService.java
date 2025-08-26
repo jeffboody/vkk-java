@@ -133,7 +133,7 @@ implements LocationListener
 
 		if(mGpsRecord)
 		{
-			stopForeground(true);
+			stopForeground(STOP_FOREGROUND_REMOVE);
 			gpsStop();
 			mGpsRecord = false;
 		}
